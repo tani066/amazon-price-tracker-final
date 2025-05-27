@@ -35,7 +35,7 @@ export async function GET() {
       },
     });
 
-    if (prevData && prevData.price > newProductData.price) {
+    if (prevData && typeof prevData.price === 'number' && typeof newProductData.price === 'number' && prevData.price > newProductData.price) {
       await prisma.notification.create({
         data: {
           userEmail: product.userEmail,

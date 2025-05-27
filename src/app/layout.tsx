@@ -6,7 +6,6 @@ import { auth } from "@/auth";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -24,34 +23,37 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
-  const session = await auth()
-  const user = session?.user
-  if (!user){
-    return(
-      <LoginView/>
-    )
+}) {
+  const session = await auth();
+  const user = session?.user;
+
+  if (!user) {
+    // Here you must still return <html> and <body> for Next.js
+    return (
+      <html lang="en">
+        <body>
+          <LoginView />
+        </body>
+      </html>
+    );
   }
+
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <div className="min-h-scree">
-      
-      <div className="px-4 py-3 max-w-6xl mx-auto h-screen">
-        <Header user={user}/>
-        <div className='grid grid-cols-12 mt-4 gap-4'>
-          <div className='col-span-3 rounded-2xl p-4 shadow-md bg-white mr-3'>
-            <Sidebar/>
-           
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <div className="min-h-screen">
+          <div className="px-4 py-3 max-w-6xl mx-auto h-screen">
+            <Header user={user} />
+            <div className="grid grid-cols-12 mt-4 gap-4">
+              <div className="col-span-3 rounded-2xl p-4 shadow-md bg-white mr-3">
+                <Sidebar />
+              </div>
+              <div className="col-span-9">{children}</div>
+            </div>
           </div>
-        {children}
         </div>
-      </div>
-    </div>
       </body>
     </html>
   );

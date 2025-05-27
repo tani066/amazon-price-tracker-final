@@ -1,93 +1,91 @@
-
-import * as cheerio from 'cheerio';
 import fetch from 'node-fetch';
-export async function scrapeProducts(productID: string) {
-  const parsePrice = (priceStr: string): number => {
-    // Remove currency symbol and commas, parse to int
-    if (!priceStr) return 0;
-    const cleaned = priceStr.replace(/[₹,]/g, '').split('.')[0];
-    return parseInt(cleaned, 10) || 0;
-  };
-  
-  const parseReviewsCount = (reviewsStr: string): number => {
-    if (!reviewsStr) return 0;
-    const match = reviewsStr.match(/\d+/);
-    return match ? parseInt(match[0], 10) : 0;
-  };
-  
-  const parseRating = (ratingStr: string): number => {
-    if (!ratingStr) return 0;
-    const rating = parseFloat(ratingStr);
-    return Math.round(rating);
-    
-  };
-  const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;;
-  const amazonUrl = `https://www.amazon.in/dp/${productID}`;
-  if (!SCRAPER_API_KEY) {
-    throw new Error('Missing SCRAPER_API_KEY in environment variables.');
-  }
+
+export interface ProductData {
+  name: string;
+  image: string;
+  rating: number | null;
+  total_reviews: number | null;
+  price: number | null;
+  availability: string | null;
+  asin: string;
+}
+
+export async function scrapeProducts(asin: string): Promise<ProductData | null> {
   try {
-    const response = await fetch(
-      `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${amazonUrl}`
-    );
+    const apiKey = process.env.SCRAPER_API_KEY;
+    const apiUrl = `https://api.scraperapi.com/structured/amazon/product?api_key=${apiKey}&asin=${asin}&country_code=in&tld=in`;
+
+    const structuredResponse = await fetch(apiUrl);
+    if (!structuredResponse.ok) throw new Error(`API error: ${structuredResponse.status}`);
+
+    interface ScraperApiResponse {
+      name?: string;
+      images?: string[];
+      average_rating?: number;
+      total_reviews?: number;
+      price?: string;
+      availability_status?: string;
+    }
+
+    const data = (await structuredResponse.json()) as ScraperApiResponse;
+
+    const price = parsePrice(data?.price) || (await fetchProductPriceFromHTML(asin));
+
+    return {
+      name: data?.name ?? 'Unknown',
+      image: data?.images?.[0] ?? '',
+      rating: data?.average_rating ?? null,
+      total_reviews: data?.total_reviews ?? null,
+      price: price ?? null,
+      availability: data?.availability_status ?? null,
+      asin,
+    };
+  } catch (error) {
+    console.error('❌ Error scraping product:', error);
+    return null;
+  }
+}
+
+function parsePrice(priceStr?: string): number | null {
+  if (!priceStr) return null;
+  const numeric = priceStr.replace(/[^\d]/g, '');
+  return numeric ? parseInt(numeric, 10) : null;
+}
+
+async function fetchProductPriceFromHTML(asin: string): Promise<number | null> {
+  try {
+    const url = `https://www.amazon.in/dp/${asin}`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36',
+      },
+    });
 
     if (!response.ok) {
-      console.error('Failed to fetch page');
-      return false;
+      console.error('Failed to fetch product page HTML:', response.status);
+      return null;
     }
 
     const html = await response.text();
-    const $ = cheerio.load(html);
 
-    const title = $('#productTitle').text().trim();
-
-    const image =
-      $('#landingImage').attr('src') ||
-      $('img#imgBlkFront').attr('src') ||
-      $('img.a-dynamic-image').attr('src') ||
-      '';
-
-    // Price selectors
-    const priceSelectors = [
-      '#priceblock_ourprice',
-      '#priceblock_dealprice',
-      '#priceblock_saleprice',
-      '#corePriceDisplay_desktop_feature_div .a-offscreen',
-      '.a-price .a-offscreen',
-      '#tp_price_block_total_price_ww .a-offscreen',
+    const regexes = [
+      /id="priceblock_ourprice".*?>\s*₹?([\d,]+)/i,
+      /id="priceblock_dealprice".*?>\s*₹?([\d,]+)/i,
+      /"priceToPay".*?>\s*<span.*?>\s*₹?([\d,]+)/i,
+      /"a-price-whole">([\d,]+)/i, // extra fallback
     ];
 
-    let price = '';
-    for (const selector of priceSelectors) {
-      price = $(selector).first().text().trim();
-      if (price) break;
+    for (const regex of regexes) {
+      const match = html.match(regex);
+      if (match && match[1]) {
+        return parseInt(match[1].replace(/,/g, ''), 10);
+      }
     }
 
-    if (!price) {
-      console.warn('⚠️ Price not found.');
-    }
-
-    const ratingRaw = $('span.a-icon-alt').first().text().trim().split(' ')[0];
-    const reviewsRaw = $('#acrCustomerReviewText').text().trim();
-
-    // Parse to correct types
-    const priceInt = parsePrice(price);
-    const reviewsCount = parseReviewsCount(reviewsRaw);
-    const averageRating = parseRating(ratingRaw);
-
-    // Save to DB
-   return {
-    amazonId: productID,
-    title:title,
-    img: image,
-    price: priceInt,
-    reviewsCount,
-    reviewsAverageRating: averageRating,
-  }
-
-
+    return null;
   } catch (error) {
-    console.error('An error occurred while scraping products:', error);
-    return false;
+    console.error('❌ Error fetching price from product page:', error);
+    return null;
   }
 }

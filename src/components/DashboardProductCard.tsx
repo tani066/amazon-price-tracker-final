@@ -43,7 +43,8 @@ const DashboardProductCard = ({ product, history }: DashboardProductCardProps) =
             </h3>
 
             <div className="mt-1 sm:mt-0 text-green-700 font-bold text-lg">
-              ₹{product.price.toLocaleString()}
+            {product.price !== null ? `₹${product.price}` : 'Price unavailable'}
+
             </div>
           </div>
 
