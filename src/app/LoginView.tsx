@@ -1,28 +1,28 @@
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import React from 'react'
-import { signIn } from "@/auth"
+'use client';
+
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import React from 'react';
+import { signIn } from 'next-auth/react'; // ⬅️ Use next-auth client method here
 
 const LoginView = () => {
-  return (
-    <div className='w-full h-screen flex items-center justify-center'>
-        <Card className=' text-center'>
-          <div>
-            <h1 className='text-2xl font-bold m-0'>Welcome Back</h1>
-            <p>please login to continue</p>
-          </div>
-          <div>
-            <form action={async() => {
-              'use server'
-              await signIn('google')
-            }}>
-              <Button type='submit'>Login with Google</Button>
-            </form>
-            
-          </div>
-        </Card>
-    </div>
-  )
-}
+  const handleLogin = async () => {
+    await signIn('google');
+  };
 
-export default LoginView
+  return (
+    <div className='w-full h-screen flex items-center justify-center bg-gray-100'>
+      <Card className='p-8 w-full max-w-md text-center space-y-6'>
+        <div>
+          <h1 className='text-2xl font-bold mb-2'>Welcome Back</h1>
+          <p className='text-gray-600'>Please log in to continue</p>
+        </div>
+        <div>
+          <Button onClick={handleLogin}>Login with Google</Button>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+export default LoginView;
