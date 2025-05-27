@@ -23,7 +23,17 @@ export async function GET() {
       continue;
     }
 
-    await prisma.productDataHistory.create({ data: newProductData });
+    await prisma.productDataHistory.create({
+      data: {
+        amazonId: product.amazonId,
+        title: product.title,
+        img: product.img,
+        reviewsCount: 0, // Default to 0 as reviewsCount is not available in ProductData
+        reviewsAverageRating: 0, // Default to 0 as reviewsAverageRating is not available in ProductData
+        price: newProductData.price ?? 0,
+        createdAt: new Date(),
+      },
+    });
 
     const prevData = await prisma.productDataHistory.findFirst({
       where: {
