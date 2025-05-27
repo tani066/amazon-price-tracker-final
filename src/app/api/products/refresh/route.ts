@@ -1,22 +1,19 @@
-import { prisma } from "@/lib/db";
-import { scrapeProducts } from "@/lib/productScrapper";
-import { endOfDay, isToday, startOfDay, subDays } from "date-fns";
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { scrapeProducts } from '@/lib/productScrapper';
+import { endOfDay, isToday, startOfDay, subDays } from 'date-fns';
 
 export async function GET() {
   const products = await prisma.product.findMany();
 
   for (const product of products) {
     const latestHistorydata = await prisma.productDataHistory.findFirst({
-      where: {
-        amazonId: product.amazonId,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      where: { amazonId: product.amazonId },
+      orderBy: { createdAt: 'desc' },
     });
 
     if (latestHistorydata && isToday(latestHistorydata.createdAt)) {
-      continue; // Skip if we already fetched today
+      continue;
     }
 
     const newProductData = await scrapeProducts(product.amazonId);
@@ -26,9 +23,7 @@ export async function GET() {
       continue;
     }
 
-    await prisma.productDataHistory.create({
-      data: newProductData,
-    });
+    await prisma.productDataHistory.create({ data: newProductData });
 
     const prevData = await prisma.productDataHistory.findFirst({
       where: {
@@ -51,5 +46,5 @@ export async function GET() {
     }
   }
 
-  return Response.json({ status: "ok" });
+  return NextResponse.json({ status: 'ok' });
 }
