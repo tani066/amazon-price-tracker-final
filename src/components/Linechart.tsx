@@ -21,6 +21,7 @@ interface LinechartProps {
 
 const Linechart: React.FC<LinechartProps> = ({
   data = [],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   label = 'Price',
   color = 'hsl(var(--chart-1))',
 }) => {

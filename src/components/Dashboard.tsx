@@ -12,6 +12,10 @@ const Dashboard = async () => {
     return null;
   }
 
+  if (!user.email) {
+    return null;
+  }
+
   const products = await prisma.product.findMany({
     where: { userEmail: user.email },
   });

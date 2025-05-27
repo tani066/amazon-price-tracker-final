@@ -49,7 +49,7 @@ const DashboardProductCard = ({ product, history }: DashboardProductCardProps) =
 
           {/* Time ago */}
           <div className="text-xs text-gray-500 mb-2">
-            <TimeAgo date={product.updatedAt} locale="en-US" />
+            <TimeAgo date={product.updatedAt} />
           </div>
 
           {/* Price Chart */}

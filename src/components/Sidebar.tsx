@@ -1,4 +1,4 @@
-import { AlignJustifyIcon, BellIcon, HeadsetIcon, LaptopIcon, PackagePlusIcon, PlugIcon } from 'lucide-react'
+import { AlignJustifyIcon, BellIcon, PackagePlusIcon,} from 'lucide-react'
 import React from 'react'
 import Link from 'next/link'
 

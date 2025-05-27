@@ -1,26 +1,33 @@
-'use server'
-
+'use server';
 
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { scrapeProducts } from '@/lib/productScrapper';
 
-
-
 const ProductAction = async (productID: string) => {
   const session = await auth();
-  const userId = session?.user;
-  if (!userId) {
+  const user = session?.user;
+
+  if (!user) {
     console.error('User not authenticated');
     return false;
   }
-  const productRow = await prisma.product.create(
-   {
+
+  const productData = await scrapeProducts(productID);
+
+  if (!productData) {
+    console.error('Failed to scrape product data');
+    return false;
+  }
+
+  await prisma.product.create({
     data: {
-      ...await scrapeProducts(productID),
-      userEmail: userId.email || '',
+      ...productData,
+      userEmail: user.email || '',
     },
-   }
-  );
-}
+  });
+
+  return true;
+};
+
 export default ProductAction;
