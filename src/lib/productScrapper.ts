@@ -11,23 +11,29 @@ export interface ProductData {
 }
 
 export async function scrapeProducts(asin: string): Promise<ProductData | null> {
+  const apiKey = process.env.SCRAPER_API_KEY;
+  if (!apiKey) {
+    console.error('❌ Missing SCRAPER_API_KEY in environment variables');
+    return null;
+  }
+
+  const apiUrl = `https://api.scraperapi.com/structured/amazon/product?api_key=${apiKey}&asin=${asin}&country_code=in&tld=in`;
+
   try {
-    const apiKey = process.env.SCRAPER_API_KEY;
-    const apiUrl = `https://api.scraperapi.com/structured/amazon/product?api_key=${apiKey}&asin=${asin}&country_code=in&tld=in`;
-
     const structuredResponse = await fetch(apiUrl);
-    if (!structuredResponse.ok) throw new Error(`API error: ${structuredResponse.status}`);
+    if (!structuredResponse.ok) {
+      console.error(`❌ ScraperAPI error: ${structuredResponse.status}`);
+      return null;
+    }
 
-    interface ScraperApiResponse {
+    const data = await structuredResponse.json() as {
       name?: string;
       images?: string[];
       average_rating?: number;
       total_reviews?: number;
       price?: string;
       availability_status?: string;
-    }
-
-    const data = (await structuredResponse.json()) as ScraperApiResponse;
+    };
 
     const price = parsePrice(data?.price) || (await fetchProductPriceFromHTML(asin));
 
@@ -63,7 +69,7 @@ async function fetchProductPriceFromHTML(asin: string): Promise<number | null> {
     });
 
     if (!response.ok) {
-      console.error('Failed to fetch product page HTML:', response.status);
+      console.error('❌ Failed to fetch HTML. Status:', response.status);
       return null;
     }
 
@@ -73,7 +79,7 @@ async function fetchProductPriceFromHTML(asin: string): Promise<number | null> {
       /id="priceblock_ourprice".*?>\s*₹?([\d,]+)/i,
       /id="priceblock_dealprice".*?>\s*₹?([\d,]+)/i,
       /"priceToPay".*?>\s*<span.*?>\s*₹?([\d,]+)/i,
-      /"a-price-whole">([\d,]+)/i, // extra fallback
+      /"a-price-whole">([\d,]+)/i,
     ];
 
     for (const regex of regexes) {
@@ -83,9 +89,10 @@ async function fetchProductPriceFromHTML(asin: string): Promise<number | null> {
       }
     }
 
+    console.warn('⚠️ No price match found in HTML.');
     return null;
   } catch (error) {
-    console.error('❌ Error fetching price from product page:', error);
+    console.error('❌ Error fetching HTML price:', error);
     return null;
   }
 }
