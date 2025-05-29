@@ -2,8 +2,8 @@ name: fetch
 
 on:
   schedule:
-    - cron: '0 * * * *'  
-  workflow_dispatch:  
+    - cron: '*/30 * * * *'  # Every 30 minutes
+  workflow_dispatch:
 
 jobs:
   cron:
@@ -11,4 +11,4 @@ jobs:
     steps:
       - name: Call our API route
         run: |
-          curl https://your-deployment-url.com/api/cron
+          curl https:/https://amazon-price-tracker-final.vercel.app/api/products/refresh
