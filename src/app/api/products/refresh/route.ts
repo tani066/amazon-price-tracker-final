@@ -12,9 +12,7 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    if (latestHistorydata && isToday(latestHistorydata.createdAt)) {
-      continue;
-    }
+    if (latestHistorydata && isToday(latestHistorydata.createdAt)) continue;
 
     const newProductData = await scrapeProducts(product.amazonId);
 
@@ -23,13 +21,17 @@ export async function GET() {
       continue;
     }
 
+    if (newProductData.price == null) {
+      console.warn(`⚠️ Price is null for ${product.amazonId}`);
+    }
+
     await prisma.productDataHistory.create({
       data: {
         amazonId: product.amazonId,
-        title: product.title,
-        img: product.img,
-        reviewsCount: 0, // Default to 0 as reviewsCount is not available in ProductData
-        reviewsAverageRating: 0, // Default to 0 as reviewsAverageRating is not available in ProductData
+        title: newProductData.name || product.title,
+        img: newProductData.image || product.img,
+        reviewsCount: newProductData.total_reviews ?? 0,
+        reviewsAverageRating: newProductData.rating ?? 0,
         price: newProductData.price ?? 0,
         createdAt: new Date(),
       },
@@ -45,7 +47,12 @@ export async function GET() {
       },
     });
 
-    if (prevData && typeof prevData.price === 'number' && typeof newProductData.price === 'number' && prevData.price > newProductData.price) {
+    if (
+      prevData &&
+      typeof prevData.price === 'number' &&
+      typeof newProductData.price === 'number' &&
+      prevData.price > newProductData.price
+    ) {
       await prisma.notification.create({
         data: {
           userEmail: product.userEmail,
